@@ -1,24 +1,24 @@
-import axios from 'axios';
-import Notiflix from 'notiflix';
-export { fetchBreeds, fetchCatByBreed };
-axios.defaults.headers.common['x-api-key'] = 'live_EpI2AskpjZzqbKW98a5jHFm0nA93wyK3gOJynaFbNtCzvLqwZ5bLdT6rWOxQXJn0';
-
-
-function fetchBreeds() {
-    return axios.get('https://api.thecatapi.com/v1/breeds')
-        .then(response => response.data)
-        
-};
-
-
-function fetchCatByBreed(breedId) {
-    return axios.get(`https://api.thecatapi.com/v1/images/search?breed_ids=${breedId}`)
+const url = 'https://api.thecatapi.com/v1';
+const api_key = "live_lStqY7ZXaIh8bTYkAWQQwtY1ZaukecGyxFgNhs65GXBvR5Z0FNm0tR2N66Vj12yQ";
+export function fetchBreeds() {
+    return fetch(`${url}/breeds?api_key=${api_key}`)
         .then(response => {
-            Notiflix.Loading.hourglass('Завантаження'); 
-            return response.data
+            if (!response.ok) {
+                throw new Error(response.status);
+            }
+            return response.json();
         })
-        .finally(()=>{
-            Notiflix.Loading.remove();
-        } )
-        
-}
+};
+export function fetchCatByBreed(breedId) {
+    return fetch(`${url}/images/search?api_key=${api_key}&breed_ids=${breedId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(response.status);
+            }
+            return response.json();
+        })
+        .catch(() => {
+            setErrorState(true);
+            setLoadingState(false);
+        });
+};

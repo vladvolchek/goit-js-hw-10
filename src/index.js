@@ -1,72 +1,77 @@
-import Notiflix from "notiflix";
-import SlimSelect from "slim-select";
-import { fetchBreeds, fetchCatByBreed } from './cat-api';
+import { fetchBreeds, fetchCatByBreed } from "./cat-api";
 
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
 
-const container = document.querySelector('.breed-select');
-const load = document.querySelector('.loader');
-const error = document.querySelector('.error');
-const catInfo = document.querySelector('.cat-info');
+const select = document.querySelector('.breed-select');
+const loader = document.querySelector('.loader');
+const errorMessage = document.querySelector('.error');
+const info = document.querySelector('.cat-info');
+function setLoadingState (isLoading) {
+    loader.style.display = isLoading ? 'block' : 'none';
+};
+function setErrorState (hasError) {
+    errorMessage.style.display = hasError ? 'block' : 'none';
+    select.style.display = hasError ? 'none' : 'block';
+};
 
-
-container.style.visibility = 'hidden';
-error.style.display = 'none';
-
-
-fetchBreeds()
-    .then(breeds => {
-        container.style.visibility = 'visible';
-        load.style.display = 'none';
-        
-
-        const cat = breeds.map(breed =>
-            `<option value="${breed.id}">${breed.name}</option>`).join('');
-
-        container.insertAdjacentHTML('beforeend', cat);
-    })
-    .catch(error => {
-        console.log(error);
-        
-        Notiflix.Report.failure('Oops! Something went wrong! Try reloading the page!');
-
-       
-    });
-
-
-container.addEventListener('change', handleChange);
-
-
-function handleChange() {
+const defaultOption = document.createElement('option');
+defaultOption.textContent = "Виберіть породу кота";
+defaultOption.value = "";
+select.appendChild(defaultOption);
     
-    catInfo.innerHTML = '';
-    const selectedBreed = this.value;
-
-
-    load.style.display = 'block';
-
-    fetchCatByBreed(selectedBreed)
-        .then(cat => { 
-
-            
-        const url = cat[0].url;
-        const name = cat[0].breeds[0].name;
-        const description = cat[0].breeds[0].description;
-        const temperament = cat[0].breeds[0].temperament;
-
-
-        catInfo.innerHTML = `
-        <div><img src="${url}" alt="${name}" width="400"></div>
-        <div>
-        <h3>${name}</h3>
-        <p>Description: ${description}</p>
-        <p>Temperament: ${temperament}</p>
-        </div>
-            `;
-            load.style.display = 'none';
-            Notiflix.Loading.remove(1100)
-        })
-        .catch(error => {
-            Notiflix.Report.failure('Oops! Something went wrong! Try reloading the page!', String(error), "Okay");
+fetchBreeds()
+    .then(data => {
+        data.forEach(breed => {
+            const option = document.createElement('option');
+            option.value = breed.id;
+            option.textContent = breed.name;
+            select.appendChild(option)
+            select.style.display = "block"; 
         });
-        
-    }
+    })
+    .catch(() => {
+        setErrorState(true)
+        select.style.display = "none"; 
+    })
+    .finally(() => {
+        setLoadingState(false);
+    })
+
+select.addEventListener('change', onSelectBreed);
+function onSelectBreed(event) {
+    setErrorState(false);
+    setLoadingState(true);
+    info.innerHTML = '';
+    const breedId = event.target.value;
+        fetchCatByBreed(breedId)
+        .then(data => {
+            const { url, breeds } = data[0];
+            const markup = `
+        <div class="box-img">
+        <img src="${url}" alt="${breeds[0].name}" width="400"/>
+        </div><div class="box">
+        <h1>${breeds[0].name}</h1>
+        <p>${breeds[0].description}</p>
+        <p>
+        <b>Temperament:</b>
+        ${breeds[0].temperament}</p>
+        </div>`
+            info.insertAdjacentHTML('beforeend', markup);
+        })
+        .catch(onFetchError)
+            .finally(() => {
+                setLoadingState(false)
+                select.style.display = 'block';
+            })
+    
+}
+
+function onFetchError() {
+    setLoadingState(true);
+    Notify.failure(errorMessage.textContent, {
+        position: 'center-center',
+        timeout: 5000,
+        width: '400px',
+        fontSize: '24px'
+    });
+};
